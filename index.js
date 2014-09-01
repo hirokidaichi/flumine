@@ -1,98 +1,112 @@
 var Promise = require("promise");
+var util = require("util");
 
-
-var reserve = function(f) {
+var slice = Array.prototype.slice;
+var reserve = module.exports.reserve = function(f) {
     var reserver = function(d) {
         return new Promise(function(ok, ng) {
-            f({
-                next: ok,
-                error: ng,
-                value: d,
-            })
+            f(d, ok, ng)
         });
     };
-    reserver.label = function(reserverName){
-        return debug(reserverName+" in :")
-                .to(reserver)
-                .to(debug(reserverName+" out :"));
+    var _self = reserver;
+
+    reserver.label = function(reserverName) {
+        return debug(reserverName + " in :")
+            .to(_self)
+            .to(debug(reserverName + " out :"));
     };
     reserver.rescue = function(handler) {
-        return reserve(function(ctx) {
-            reserver(ctx.value)
+        return reserve(function(d, ok, ng) {
+            _self(d)
                 .
             catch (handler)
-                .then(ctx.next)
+                .then(ok)
                 .
-            catch (ctx.error);
+            catch (ng);
 
         })
     };
-    reserver.to = function(nextReserver) {
-        return reserve(function(ctx) {
-            reserver(ctx.value)
-                .then(nextReserver)
+    reserver.to = function(nextReserver, hasArgs) {
+        var next = (hasArgs != undefined) ? reserve.curry.apply(null, slice.call(arguments)) : nextReserver;
+        return reserve(function(d, ok, ng) {
+            _self(d)
+                .then(next)
                 .then(function(d) {
-                    ctx.next(d)
+                    ok(d)
                 })
                 .
-            catch (ctx.error);
+            catch (ng);
         });
     };
-    reserver.race = function(list) {
-        return reserve(function(ctx) {
-            Promise.race(list.map(function(pf) {
-                return pf(ctx.value);
-            })).then(ctx.next);
-        });
+    reserver.race = function(next) {
+        if (util.isArray(next)) {
+            return _self.to(function(d) {
+                return Promise.race(next.map(function(pf) {
+                    return pf(d);
+                }));
+            });
+        } else {
+            return _self.to(function(d, ok, ng) {
+                return Promise.race((d || []).map(next))
+            });
+        }
     };
-    reserver.all = function(list) {
-        return reserve(function(ctx) {
-            Promise.all(list.map(function(pf) {
-                return pf(ctx.value);
-            })).then(ctx.next);
-        });
+    reserver.all = function(next) {
+        if (util.isArray(next)) {
+            return _self.to(function(d) {
+                return Promise.all(next.map(function(pf) {
+                    return pf(d);
+                }));
+            });
+        } else {
+            return _self.to(function(d, ok, ng) {
+                return Promise.all((d || []).map(next))
+            });
+        }
     };
     return reserver;
 };
 
-var pass = reserve(function(ctx) {
-    ctx.next(ctx.value);
+var pass = reserve(function(d, ok, ng) {
+    ok(d);
 });
-reserve.to = function(nextHandler) {
-    return pass.to(nextHandler);
+
+reserve.to = function() {
+    return pass.to.apply(null,slice.call(arguments));
 };
-reserve.all = function(list) {
-    return pass.all(list);
+reserve.all = function(reserverList) {
+    return pass.all(reserverList);
 };
-reserve.race = function(list) {
-    return pass.race(list);
+reserve.race = function(reserverList) {
+    return pass.race(reserverList);
 };
-reserve.value = function(value){
-    return reserve(function(ctx){
-        ctx.next(value);
+reserve.value = function(value) {
+    return reserve(function(d, ok, ng) {
+        ok(value);
     });
-}
-;
-var debug = function(message) {
-    return reserve(function(ctx) {
-        debug.log(message, ctx.value);
-        ctx.next(ctx.value);
+};
+
+reserve.curry = function() {
+    var args = slice.call(arguments);
+    var pf = args.shift();
+    return pass.to(function(d) {
+        return pf.apply(null, args);
+    });
+
+};
+var debug = module.exports.debug = function(message) {
+    return reserve(function(d, ok, ng) {
+        debug.log(message, d);
+        ok(d);
     });
 };
 
 debug.log = console.log;
 
-var delay = function(ms) {
-    return reserve(function(ctx) {
+var delay = module.exports.delay = function(ms) {
+    return reserve(function(d, ok, ng) {
         setTimeout(function() {
-            ctx.next(ctx.value);
+            ok(d);
         }, ms);
     });
 };
-
-module.exports.reserve = reserve;
-module.exports.delay = delay;
-module.exports.debug = debug;
-
-
-
