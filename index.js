@@ -8,7 +8,7 @@ var jsonquery = require("json-query");
 
 var slice = Array.prototype.slice;
 
-var k = function(a, b, c) {};
+var empty = function() {};
 
 var query = function(data, query) {
     return jsonquery(query, {
@@ -48,17 +48,18 @@ var flumine = module.exports = function(f) {
     };
     var _self = fluminer;
     _self.isFlumine = true;
-    Object.keys(flumine.extention).forEach(function(key) {
-        _self[key] = flumine.extention[key].bind(_self);
+    _self.then = _self;
+    Object.keys(flumine.extension).forEach(function(key) {
+        _self[key] = flumine.extension[key].bind(_self);
     });
 
     return fluminer;
 };
 
 
-var extention = flumine.extention = {};
+var extension = flumine.extension = {};
 
-extention.rescue = function(handler) {
+extension.rescue = function(handler) {
     var _self = this;
     return flumine(function(d, ok, ng) {
         _self(d)
@@ -81,7 +82,7 @@ var fluminize = function(func) {
     });
 };
 // [request,response = next(request)] の形で返す
-extention.pair = function(n) {
+extension.pair = function(n) {
     var next = fluminize(n);
     return this.to(function(d, ok, ng) {
         var req = d;
@@ -91,13 +92,19 @@ extention.pair = function(n) {
     });
 };
 
-extention.transform = function(signature) {
+extension.transform = function(signature) {
     return this.to(function(d) {
         return transform(signature, d);
     });
 };
 
-extention.and = extention.to = function(nextReserver) {
+extension.extend = function(value) {
+    return this.to(function(d) {
+        return extend(d, value);
+    });
+};
+
+extension.and = extension.to = function(nextReserver) {
     var _self = this;
     var next = fluminize(nextReserver);
     return flumine(function(d, ok, ng) {
@@ -111,7 +118,7 @@ extention.and = extention.to = function(nextReserver) {
     });
 };
 
-extention.first = extention.race = function(next) {
+extension.first = extension.race = function(next) {
     var _self = this;
     if (util.isArray(next)) {
         return _self.to(function(d) {
@@ -125,7 +132,17 @@ extention.first = extention.race = function(next) {
         });
     }
 };
-extention.each = extention.all = function(next) {
+
+extension.listener = function() {
+    var _self = this;
+    return function() {
+        var args = (arguments.length > 1) ? slice.call(arguments) : arguments[0];
+        return _self(args);
+    };
+};
+
+
+extension.each = extension.all = function(next) {
     var _self = this;
     if (util.isArray(next)) {
         return _self.to(function(d) {
@@ -140,19 +157,66 @@ extention.each = extention.all = function(next) {
     }
 };
 
-extention.fixed = extention.value = function(value) {
+
+flumine.debugLogger = (process.env.NODE_ENV == "development") ? console.log : empty;
+
+var log = function(message) {
+    return flumine(function(d) {
+        flumine.debugLogger(message, d);
+        return d;
+    });
+};
+
+extension.debug = function(code) {
+    var name = code || "";
+    return log(name + " input:").and(this).and(log(name + " output:"));
+};
+
+extension.fixed = extension.value = function(value) {
     return this.to(function(d, ok, ng) {
         ok(value);
     });
 };
 
-extention.set = function(mapper) {
+extension.set = function(mapper) {
     var flumineList = Object.keys(mapper).map(function(k) {
-        return fluminize(mapper[k]);
+        return util.isFunction(mapper[k]) ? fluminize(mapper[k]) : flumine.fixed(mapper[k]);
     });
     return this.each(flumineList).and(function(d) {
         return zip(Object.keys(mapper), d);
     });
+};
+
+extension.emit = function(emitter, eventName) {
+    return this.to(function(d) {
+        emitter.emit(eventName, d);
+        return d;
+    });
+};
+
+extension.delay = function(msec) {
+    return this.to(function(d, ok, ng) {
+        setTimeout(function() {
+            ok(d);
+        }, msec);
+    });
+};
+
+extension.ifOnly = function(conditionOrQuery) {
+    var predicate = util.isFunction(conditionOrQuery) ?
+        conditionOrQuery : function(d) {
+            return !!query(data, conditionOrQuery);
+        };
+    return this.to(function(d, ok, ng) {
+        if (predicate(d)) {
+            ok(d);
+        }
+    });
+};
+
+extension.through = function(reserver) {
+    var next = fluminize(reserver);
+    return this.pair(next).transform("[0]");
 };
 
 var pass = flumine.pass = flumine(function(d, ok, ng) {
@@ -160,7 +224,7 @@ var pass = flumine.pass = flumine(function(d, ok, ng) {
 });
 
 
-Object.keys(extention).forEach(function(key) {
+Object.keys(extension).forEach(function(key) {
     flumine[key] = function() {
         return pass[key].apply(this, slice.call(arguments));
     };

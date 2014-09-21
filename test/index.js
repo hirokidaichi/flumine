@@ -1,11 +1,10 @@
 var flumine = require("../");
-var util = require("../util");
 var assert = require("power-assert");
 var fs = require("fs-promise");
 
 describe("flumine", function() {
-    var delay = util.delay;
-    var debug = util.debug;
+    var delay = flumine.delay;
+    ;
     it("should retern a funtion returning promise", function(done) {
         var promiseFunc = flumine(function(d, ok, ng) {
             ok(10);
@@ -17,10 +16,10 @@ describe("flumine", function() {
         }).then(done, done);
     });
     it("should be connectable", function(done) {
-        var double = function(d, ok, ng) {
-            ok(d * 2);
-        };
-        var $double = flumine(double);
+
+        var $double = flumine(function(d) {
+            return d * 2;
+        });
         var $8thtimes = $double.to($double).to(function(d) {
             return d * 2;
         });
@@ -77,32 +76,77 @@ describe("flumine", function() {
         }));
 
     });
-    describe("curry", function() {
-        /*
-        it("should make curried function", function(done) {
-            var pf = function(a, b, c, d) {
-                var Promise = require("Promise");
-                return new Promise(function(ok, ng) {
-                    ok([a, b, c, d]);
-                });
-            };
-            var r = flumine.curry(pf, 10, 20, 30, 40);
-            r(11).then(function(d) {
-                assert.deepEqual(d, [10, 20, 30, 40]);
-            }).then(done, done);
+    describe("set", function() {
+        it("can set a flumine as object value", function() {
+            return flumine.set({
+                a: flumine.fixed(1),
+                b: flumine.fixed(2),
+                c: flumine.delay(200).fixed(3),
+                d: 10
+            }).to(function(d) {
+                assert(d.a, 1);
+                assert(d.b, 2);
+                assert(d.c, 3);
+                assert(d.d, 10);
+            })();
         });
-        it("should adapt to promise function", function(done) {
-            var existsIndexJs = flumine.to(fs.exists, "./index.js");
-            existsIndexJs().then(function(d) {
-                assert(d);
-            }).then(done, done);
+    });
+    describe("through", function() {
+        it("should ignore return value of a flumine", function() {
+            return flumine.fixed(10).through(flumine.fixed(20)).to(function(d) {
+                assert(d, 10);
+            })();
         });
-        it("should adapt to promise", function(done) {
-            var existsIndexJs = flumine.value("./inde.js").to(fs.exists);
-            existsIndexJs().then(function(d) {
-                assert(d === false);
-            }).then(done, done);
+    });
+    var mixedValue = {
+        page: 1,
+        index: 10,
+        entries: [
+            {
+                age: 10,
+                name: "hoge"
+            },
+            {
+                age: 20,
+                name: "fuga"
+            }
+        ]
+    };
+    describe("transform", function() {
+        it("should transform by json-query and pickup the value", flumine.fixed(mixedValue)
+        .transform("entries").to(function(d) {
+            assert(d.length == 2);
+        }));
+
+        it("should transform by json-query and filtered value", function() {
+            return flumine.fixed(mixedValue).transform({
+                hoge: "entries[name=hoge].age",
+                fuga: "entries[name=fuga].age"
+            }).to(function(d) {
+                assert(d.hoge == 10);
+                assert(d.fuga == 20);
+            })();
         });
-        */
+    });
+    describe("ifOnly", function() {
+        it("should be through only if condition is filled", function() {
+            return flumine.fixed(100).ifOnly(function(d) {
+                return d > 10;
+            }).to(function() {
+                assert(true);
+            })();
+        });
+        it("should not be through if condition is not filled", function() {
+            var lesser = flumine.fixed(100).ifOnly(function(d) {
+                return d < 0;
+            });
+            return flumine.first([
+                lesser, flumine.fixed(10).delay(100)
+            ]).to(function(d) {
+                assert(d == 10);
+            })();
+
+        });
+
     });
 });
