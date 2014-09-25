@@ -4,7 +4,6 @@ var fs = require("fs-promise");
 
 describe("flumine", function() {
     var delay = flumine.delay;
-    ;
     it("should retern a funtion returning promise", function(done) {
         var promiseFunc = flumine(function(d, ok, ng) {
             ok(10);
@@ -66,6 +65,29 @@ describe("flumine", function() {
         });
     });
 
+    describe("order", function() {
+        var num = 0;
+        var a = flumine.delay(30).and(function(d) {
+            assert.equal(num++, 0);
+            return d * 2;
+        });
+        var b = flumine.delay(20).and(function(d) {
+            assert.equal(num++, 1);
+            return d * 3;
+        });
+        var c = flumine.delay(10).and(function(d) {
+            assert.equal(num++, 2);
+            return d * 4;
+        });
+
+        var order = flumine.order([a, b, c]).and(function(d) {
+            assert.deepEqual(d, [4, 6, 8]);
+        });
+
+        it("should be execute in order", function() {
+            return order(2);
+        });
+    });
     describe("pair", function() {
         var add = function(d) {
             return d + 100;

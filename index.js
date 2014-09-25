@@ -133,6 +133,26 @@ extension.first = extension.race = function(next) {
     }
 };
 
+extension.order = function(flumines) {
+    var _self = this;
+    return this.to(function(d) {
+        var ret = [];
+        var ordered = flumines.map(function(f) {
+            return flumine.fixed(d).and(f).and(function(r) {
+                ret.push(r);
+                if (ret.length == flumines.length) {
+                    return ret;
+                } else {
+                    return d;
+                }
+            });
+        }).reduce(function(p, n) {
+            return p.and(n);
+        });
+        return ordered();
+
+    });
+};
 extension.listener = function() {
     var _self = this;
     return function() {
