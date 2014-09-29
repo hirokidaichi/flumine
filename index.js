@@ -1,7 +1,7 @@
 var promise = (global || window).Promise || require("promise");
 
 var extend = require("extend");
-
+var logFactory = require("debug");
 var util = extend(require("util"), require("util-is"));
 var zip = require("zip-object");
 var jsonquery = require("json-query");
@@ -178,18 +178,20 @@ extension.each = extension.all = function(next) {
 };
 
 
-flumine.debugLogger = (process.env.NODE_ENV == "development") ? console.log : empty;
-
 var log = function(message) {
-    return flumine(function(d) {
-        flumine.debugLogger(message, d);
-        return d;
-    });
+    var logger = logFactory(message);
+    return function(sig) {
+        return flumine(function(d) {
+            logger(sig, d);
+            return d;
+        });
+    };
 };
 
 extension.debug = function(code) {
     var name = code || "";
-    return log(name + " input:").and(this).and(log(name + " output:"));
+    var logit = log(code);
+    return logit("input").and(this).and(logit("output"));
 };
 
 extension.fixed = extension.value = function(value) {

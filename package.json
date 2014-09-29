@@ -1,6 +1,6 @@
 {
   "name": "flumine",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "wiring all",
   "main": "index.js",
   "scripts": {
@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/hirokidaichi/flumine",
   "dependencies": {
+    "debug": "^2.0.0",
     "extend": "^1.3.0",
     "json-query": "^1.1.0",
     "promise": "^5.0.0",

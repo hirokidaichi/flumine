@@ -78,7 +78,7 @@ describe("flumine", function() {
         var c = flumine.delay(10).and(function(d) {
             assert.equal(num++, 2);
             return d * 4;
-        });
+        }).debug("c");
 
         var order = flumine.order([a, b, c]).and(function(d) {
             assert.deepEqual(d, [4, 6, 8]);
