@@ -93,9 +93,9 @@ describe("flumine", function() {
             return d + 100;
         };
         it("should return result and response pair",
-        flumine.value(10).pair(add).to(function(d) {
-            assert.deepEqual(d, [10, 110]);
-        }));
+            flumine.value(10).pair(add).to(function(d) {
+                assert.deepEqual(d, [10, 110]);
+            }));
 
     });
     describe("set", function() {
@@ -123,22 +123,19 @@ describe("flumine", function() {
     var mixedValue = {
         page: 1,
         index: 10,
-        entries: [
-            {
-                age: 10,
-                name: "hoge"
-            },
-            {
-                age: 20,
-                name: "fuga"
-            }
-        ]
+        entries: [{
+            age: 10,
+            name: "hoge"
+        }, {
+            age: 20,
+            name: "fuga"
+        }]
     };
     describe("transform", function() {
         it("should transform by json-query and pickup the value", flumine.fixed(mixedValue)
-        .transform("entries").to(function(d) {
-            assert(d.length == 2);
-        }));
+            .transform("entries").to(function(d) {
+                assert(d.length == 2);
+            }));
 
         it("should transform by json-query and filtered value", function() {
             return flumine.fixed(mixedValue).transform({
@@ -169,6 +166,66 @@ describe("flumine", function() {
             })();
 
         });
+    });
+    describe("or", function() {
+        it("should catch all type of error and within inputdata", function() {
+            var input = {
+                req: {},
+                res: {},
+            };
+            var test = flumine(function(d, ok, ng) {
+                ng(new Error("message"));
+            }).or(function(err) {
+                assert(err);
+                assert.deepEqual(err.inputData, input);
+            });
+            return test(input);
+        });
+
+        it("should catch the error matching the given RegExp", function() {
+            var input = {
+                req: {},
+                res: {},
+            };
+            var test = flumine(function(d, ok, ng) {
+                ng(new Error("message"));
+            }).or(/mess.*/g, function(err) {
+                assert(err);
+                assert.deepEqual(err.inputData, input);
+            });
+            return test(input);
+        });
+        it("should not catch", function() {
+            var input = {
+                req: {},
+                res: {},
+            };
+            var test = flumine(function(d, ok, ng) {
+                ng(new Error("piyopiyo"));
+            }).or(/mess.*/g, function(err) {
+                assert.fail();
+            }).or(function(err) {
+                assert(err);
+                assert.deepEqual(err.inputData, input);
+            });
+            return test(input);
+        });
+        it("should catch the error which is a child of the given class", function() {
+            var input = {
+                req: {},
+                res: {},
+            };
+            var CustomError = function() {};
+            CustomError.prototype = new Error();
+            var test = flumine(function(d, ok, ng) {
+                ng(new CustomError("piyopiyo"));
+            }).or(CustomError, function(err) {
+                assert(err);
+                assert.deepEqual(err.inputData, input);
+            });
+            return test(input);
+        });
 
     });
+
 });

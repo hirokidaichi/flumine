@@ -59,15 +59,36 @@ var flumine = module.exports = function(f) {
 
 var extension = flumine.extension = {};
 
-extension.or = extension.rescue = function(handler) {
+var shouldCatch = function(err, catchType) {
+    if (util.isRegExp(catchType)) {
+        return catchType.test(err.message);
+    }
+    return (err instanceof catchType);
+};
+extension.or = extension.rescue = function() {
     var _self = this;
+    var handler;
+    var catchType;
+    if (arguments.length == 2) {
+        catchType = arguments[0];
+        handler = arguments[1];
+    } else {
+        handler = arguments[0];
+    }
+    var fHandler = fluminize(handler);
     return flumine(function(d, ok, ng) {
+        var catcher = flumine(function(err, ok, ng) {
+            if (catchType && !shouldCatch(err, catchType)) {
+                ng(err);
+            }
+            err.inputData = d;
+            return ok(err);
+        }).and(fHandler);
+
         _self(d)
-        .
-        catch (handler)
-        .then(ok)
-        .
-        catch (ng);
+            .then(null, catcher)
+            .then(ok)
+            .then(null, ng);
     });
 };
 
@@ -117,11 +138,11 @@ extension.and = extension.to = function(nextReserver) {
     var next = fluminize(nextReserver);
     return flumine(function(d, ok, ng) {
         _self(d)
-        .then(next)
-        .then(function(d) {
-            ok(d);
-        })
-        .
+            .then(next)
+            .then(function(d) {
+                ok(d);
+            })
+            .
         catch (ng);
     });
 };
@@ -259,5 +280,3 @@ Object.keys(extension).forEach(function(key) {
         return pass[key].apply(this, slice.call(arguments));
     };
 });
-
-
