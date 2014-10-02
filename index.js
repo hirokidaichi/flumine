@@ -59,7 +59,7 @@ var flumine = module.exports = function(f) {
 
 var extension = flumine.extension = {};
 
-extension.rescue = function(handler) {
+extension.or = extension.rescue = function(handler) {
     var _self = this;
     return flumine(function(d, ok, ng) {
         _self(d)
@@ -100,10 +100,18 @@ extension.transform = function(signature) {
 
 extension.extend = function(value) {
     return this.to(function(d) {
-        return extend(d, value);
+        if (util.isPureObject(value))
+            return extend(d, value);
+        return value;
     });
 };
-
+extension.defaults = function(value) {
+    return this.to(function(d) {
+        if (util.isPureObject(value))
+            return extend(extend({}, value), d);
+        return d ? d : value;
+    });
+};
 extension.and = extension.to = function(nextReserver) {
     var _self = this;
     var next = fluminize(nextReserver);
