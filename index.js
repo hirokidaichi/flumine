@@ -113,7 +113,7 @@ extension.pair = function(n) {
     });
 };
 
-extension.transform = function(signature) {
+extension.as = extension.transform = function(signature) {
     return this.to(function(d) {
         return transform(signature, d);
     });
@@ -253,16 +253,66 @@ extension.delay = function(msec) {
     });
 };
 
-extension.ifOnly = function(conditionOrQuery) {
-    var predicate = util.isFunction(conditionOrQuery) ?
-        conditionOrQuery : function(d) {
-            return !!query(data, conditionOrQuery);
-        };
-    return this.to(function(d, ok, ng) {
-        if (predicate(d)) {
-            ok(d);
+var createValidator = function(preds, errorType) {
+    var ErrClz = errorType || Error;
+    return function(d) {
+        var errors = [];
+
+        preds.forEach(function(p) {
+            var pred = p[1];
+            var queryStr = p[0];
+            var message = p[2];
+            var val = query(d, queryStr);
+            if (pred(val)) {
+                return;
+            }
+            errors.push({
+                message: message,
+                value: val,
+                query: queryStr
+            });
+        });
+        if (errors.length > 0) {
+            var err = new ErrClz("flumine assertion error");
+            err.errors = errors;
+            throw err;
+
         }
+    };
+
+};
+
+extension.assert = function(pred, message, errorType) {
+    if (util.isArray(pred)) {
+        return this.to(createValidator(pred, arguments[1]));
+    }
+    var ErrClz = errorType || Error;
+    return this.to(function(d) {
+        if (pred(d)) {
+            return d;
+        }
+        var err = new ErrClz(message);
+        throw err;
     });
+};
+
+extension.when = function(predicate, then) {
+    return this.to(function(d) {
+        if (predicate(d))
+            return then(d);
+        return d;
+    });
+};
+
+extension.print = function() {
+    return this.to(function(d) {
+        console.log(d);
+        return d;
+    });
+};
+
+extension.pre = extension.before = function(pre) {
+    return flumine.to(pre).and(this);
 };
 
 extension.through = function(reserver) {

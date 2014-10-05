@@ -113,6 +113,50 @@ describe("flumine", function() {
             })();
         });
     });
+    describe("assert", function() {
+        var isNumber = function(n) {
+            return require('util').isNumber(n);
+        };
+        it("should be ok", function() {
+            var test = flumine.assert(isNumber, "should be number");
+            return test(10);
+        });
+        it("should be error", function() {
+            var test = flumine.assert(isNumber, "should be number")
+                .or(function(err) {
+                    assert(err);
+                });
+            return test("unko");
+        });
+
+
+        it("should be ok when multiple assertion", function() {
+            var test = flumine.assert([
+                ["p.q", isNumber, "should be number"],
+                ["p.a", isNumber, "should be number"]
+            ]);
+            return test({
+                p: {
+                    q: 10,
+                    a: 5
+                }
+            });
+        });
+        it("should be errors", function() {
+            var test = flumine.assert([
+                ["p.q", isNumber, "should be number"],
+                ["p.a", isNumber, "should be number"]
+            ]).or(function(err) {
+                assert(err);
+            });
+            return test({
+                p: {
+                    q: "hoge",
+                    a: "fuga"
+                }
+            });
+        });
+    });
     describe("through", function() {
         it("should ignore return value of a flumine", function() {
             return flumine.fixed(10).through(flumine.fixed(20)).to(function(d) {
@@ -131,42 +175,23 @@ describe("flumine", function() {
             name: "fuga"
         }]
     };
-    describe("transform", function() {
-        it("should transform by json-query and pickup the value", flumine.fixed(mixedValue)
-            .transform("entries").to(function(d) {
+    describe("as", function() {
+        it("should as by json-query and pickup the value", flumine.fixed(mixedValue)
+            .as("entries").to(function(d) {
                 assert(d.length == 2);
             }));
 
-        it("should transform by json-query and filtered value", function() {
-            return flumine.fixed(mixedValue).transform({
+        it("should as by json-query and filtered value", function() {
+            return flumine.fixed(mixedValue).as({
                 hoge: "entries[name=hoge].age",
                 fuga: "entries[name=fuga].age"
-            }).to(function(d) {
+            }).print().to(function(d) {
                 assert(d.hoge == 10);
                 assert(d.fuga == 20);
             })();
         });
     });
-    describe("ifOnly", function() {
-        it("should be through only if condition is filled", function() {
-            return flumine.fixed(100).ifOnly(function(d) {
-                return d > 10;
-            }).to(function() {
-                assert(true);
-            })();
-        });
-        it("should not be through if condition is not filled", function() {
-            var lesser = flumine.fixed(100).ifOnly(function(d) {
-                return d < 0;
-            });
-            return flumine.first([
-                lesser, flumine.fixed(10).delay(100)
-            ]).to(function(d) {
-                assert(d == 10);
-            })();
 
-        });
-    });
     describe("or", function() {
         it("should catch all type of error and within inputdata", function() {
             var input = {
