@@ -184,14 +184,42 @@ extension.order = function(flumines) {
 
     });
 };
-extension.listener = function() {
-    var _self = this;
-    return function() {
+
+var LISTENERS = [
+
+    function zero() {
         var args = (arguments.length > 1) ? slice.call(arguments) : arguments[0];
-        return _self(args);
-    };
+        return this(args);
+    },
+    function one(f) {
+        return this(f);
+    },
+    function two(f, s) {
+        return this([f, s]);
+    },
+    function three(f, s, t) {
+        return this([f, s, t]);
+    },
+    function four(f, s, t, fourth) {
+        return this([f, s, t, fourth]);
+    }
+];
+extension.listener = function(n) {
+    var bindN = n || 0;
+    if (bindN > 4)
+        throw new Error("listener's args should be less than 5");
+    return LISTENERS[bindN].bind(this);
 };
 
+extension.connect = function() {
+    var _self = this;
+    return function(req, res, next) {
+        return _self({
+            req: req,
+            res: res
+        }).then(next, next);
+    };
+};
 
 extension.each = extension.all = function(next) {
     var _self = this;
@@ -269,9 +297,10 @@ var createValidator = function(preds, errorType) {
                 return;
             }
             errors.push({
+                name: "ValidationError",
                 message: message,
                 value: val,
-                query: queryStr
+                path: queryStr
             });
         });
         if (errors.length > 0) {

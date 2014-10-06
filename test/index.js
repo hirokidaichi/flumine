@@ -4,6 +4,17 @@ var fs = require("fs-promise");
 
 describe("flumine", function() {
     var delay = flumine.delay;
+
+    it("listener", function() {
+        var m = flumine.pass.listener();
+        assert.equal(m.length, 0);
+        var o = flumine.pass.listener(1);
+        assert.equal(o.length, 1);
+        var t = flumine.pass.listener(2);
+        assert.equal(t.length, 2);
+        var t = flumine.pass.listener(2);
+        assert.equal(t.length, 2);
+    });
     it("should retern a funtion returning promise", function(done) {
         var promiseFunc = flumine(function(d, ok, ng) {
             ok(10);
