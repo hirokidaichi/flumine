@@ -61,6 +61,8 @@ var extension = flumine.extension = {};
 
 var shouldCatch = function(err, catchType) {
     if (util.isRegExp(catchType)) {
+        if (err.name)
+            return catchType.test(err.name) || catchType.test(err.message);
         return catchType.test(err.message);
     }
     return (err instanceof catchType);
