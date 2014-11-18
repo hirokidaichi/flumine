@@ -11,6 +11,9 @@ var slice = Array.prototype.slice;
 var empty = function() {};
 
 var query = function(data, query) {
+    if (query === "_") {
+        return data;
+    }
     return jsonquery(query, {
         data: data
     }).value;
@@ -211,13 +214,13 @@ extension.listener = function(n) {
     return LISTENERS[bindN].bind(this);
 };
 
-extension.connect = function() {
+extension.connect = function(goNext) {
     var _self = this;
     return function(req, res, next) {
         return _self({
             req: req,
             res: res
-        }).then(next, next);
+        }).then(goNext ? next : null, next);
     };
 };
 
@@ -327,11 +330,15 @@ extension.assert = function(pred, message, errorType) {
     });
 };
 
-extension.when = function(predicate, then) {
+extension.when = function(predicate, then, els) {
+    var p = util.isFunction(predicate) ? predicate : function(d) {
+            return !!query(d, predicate);
+        };
+
     return this.to(function(d) {
-        if (predicate(d))
+        if (p(d))
             return then(d);
-        return d;
+        return els ? els(d) : d;
     });
 };
 

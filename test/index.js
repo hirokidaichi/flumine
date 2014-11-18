@@ -12,7 +12,7 @@ describe("flumine", function() {
         assert.equal(o.length, 1);
         var t = flumine.pass.listener(2);
         assert.equal(t.length, 2);
-        var t = flumine.pass.listener(2);
+        t = flumine.pass.listener(2);
         assert.equal(t.length, 2);
     });
     it("should retern a funtion returning promise", function(done) {
@@ -187,12 +187,12 @@ describe("flumine", function() {
         }]
     };
     describe("as", function() {
-        it("should as by json-query and pickup the value", flumine.fixed(mixedValue)
+        it("should transform by json-query and pickup the value", flumine.fixed(mixedValue)
             .as("entries").to(function(d) {
                 assert(d.length == 2);
             }));
 
-        it("should as by json-query and filtered value", function() {
+        it("should transform by json-query and filtered value", function() {
             return flumine.fixed(mixedValue).as({
                 hoge: "entries[name=hoge].age",
                 fuga: "entries[name=fuga].age"
@@ -202,7 +202,17 @@ describe("flumine", function() {
             })();
         });
     });
+    describe("when", function() {
+        it("should branch execution", flumine.fixed({})
+            .when("_", flumine.fixed(true)).to(function(d) {
+                assert(d);
+            }));
 
+        it("should branch execution and elsecondition", flumine.fixed({})
+            .when("entries", flumine.fixed(true), flumine.fixed(false)).to(function(d) {
+                assert(!d);
+            }));
+    });
     describe("or", function() {
         it("should catch all type of error and within inputdata", function() {
             var input = {
