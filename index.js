@@ -214,13 +214,24 @@ extension.listener = function(n) {
     return LISTENERS[bindN].bind(this);
 };
 
-extension.connect = function(goNext) {
+extension.connect = extension.handler = function() {
     var _self = this;
     return function(req, res, next) {
         return _self({
             req: req,
             res: res
-        }).then(goNext ? next : null, next);
+        }).then(next, next);
+    };
+};
+
+extension.errorHandler = function() {
+    var _self = this;
+    return function(err, req, res, next) {
+        return _self({
+            req: req,
+            res: res,
+            err: err
+        }).then(next, next);
     };
 };
 
@@ -239,6 +250,10 @@ extension.each = extension.all = function(next) {
     }
 };
 
+extension.stop = function() {
+    return this.and(function(r, ok, ng) {});
+};
+
 
 var log = function(message) {
     var logger = logFactory(message);
@@ -253,7 +268,16 @@ var log = function(message) {
 extension.debug = function(code) {
     var name = code || "";
     var logit = log(code);
-    return logit("input").and(this).and(logit("output"));
+    var wrapped = logit("input").and(this).and(logit("output"));
+    return wrapped.or(function(err, ok, ng) {
+        err.debugTraceList = err.debugTraceList || [];
+        err.debugTraceList.push({
+            name: code,
+            input: err.inputData
+        });
+        logit("error")(err);
+        ng(err);
+    });
 };
 
 extension.fixed = extension.value = function(value) {
@@ -342,9 +366,13 @@ extension.when = function(predicate, then, els) {
     });
 };
 
-extension.print = function() {
+extension.print = function(p) {
     return this.to(function(d) {
-        console.log(d);
+        if (p) {
+            console.log(p, d);
+        } else {
+            console.log(d);
+        }
         return d;
     });
 };
@@ -353,9 +381,21 @@ extension.pre = extension.before = function(pre) {
     return flumine.to(pre).and(this);
 };
 
+extension.invoke = function(reserver) {
+    var invokee = fluminize(reserver);
+    return this.and(function(d, ok, ng) {
+        invokee(d);
+        ok(d);
+    });
+};
+
 extension.through = function(reserver) {
     var next = fluminize(reserver);
-    return this.pair(next).transform("[0]");
+    return this.and(function(d, ok, ng) {
+        next(d).then(function(v) {
+            ok(d);
+        }, ng);
+    });
 };
 
 var pass = flumine.pass = flumine(function(d, ok, ng) {

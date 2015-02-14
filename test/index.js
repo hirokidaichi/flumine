@@ -1,5 +1,5 @@
 var flumine = require("../");
-var assert = require("power-assert");
+var assert = require("assert");
 var fs = require("fs-promise");
 
 describe("flumine", function() {
@@ -75,7 +75,24 @@ describe("flumine", function() {
             }).then(done, done);
         });
     });
+    describe("debug", function() {
+        var request = flumine.fixed("request");
+        var err = flumine.to(function(d) {
+            throw new Error("value");
+        });
+        var model = flumine.and(err).fixed("view-assign").debug("test:model");
+        var controller = flumine.fixed("model-request").and(model).debug("test:controller");
 
+        var view = flumine.fixed("html").debug("test:view");
+        var app = request.and(controller).and(view).debug("test:app");
+
+        it("should get 3 captured tracelist", app.or(function(err) {
+            assert(err.debugTraceList.length == 3);
+            assert.equal(err.debugTraceList[0].name, 'test:model');
+            assert.equal(err.debugTraceList[1].name, 'test:controller');
+            assert.equal(err.debugTraceList[2].name, 'test:app');
+        }));
+    });
     describe("order", function() {
         var num = 0;
         var a = flumine.delay(30).and(function(d) {
