@@ -269,7 +269,7 @@ extension.debug = function(code) {
     var name = code || "";
     var logit = log(code);
     var wrapped = logit("input").and(this).and(logit("output"));
-    return wrapped.or(function(err, ok, ng) {
+    return wrapped.or(Error, function(err, ok, ng) {
         err.debugTraceList = err.debugTraceList || [];
         err.debugTraceList.push({
             name: code,
