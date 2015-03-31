@@ -398,6 +398,91 @@ extension.through = function(reserver) {
     });
 };
 
+extension.props = function(map) {
+    return this.set(extend({
+        "__original__": flumine.pass
+    }, map)).and(function(o) {
+        var original = o.__original__;
+        Object.keys(map).forEach(function(key) {
+            original[key] = o[key];
+        });
+        return original;
+    });
+};
+// for List
+extension.pluck = function(t) {
+    return this.each(flumine.as(t));
+};
+
+extension.uniqBy = function(t) {
+    var sig = t || "_";
+    return this.and(function(list) {
+        var result = {};
+        var ret = [];
+        list.forEach(function(e) {
+            var key = transform(sig, e);
+            if (!result[key]) {
+                result[key] = true;
+                ret.push(e);
+            }
+        });
+        return ret;
+    });
+};
+
+extension.sortBy = function(t, asc) {
+    var sig = t || "_";
+    var order = (asc) ? 1 : -1;
+    return this.and(function(list) {
+        // schwartzian transform
+        return list.map(function(e) {
+            return [e, transform(sig, e)];
+        }).sort(function(a, b) {
+            return (a[1] - b[1]) * order;
+        }).map(function(r) {
+            return r[0];
+        });
+    });
+};
+
+extension.groupBy = function(t) {
+    var sig = t || "_";
+    return this.and(function(list) {
+        var result = {};
+        list.forEach(function(e) {
+            var key = transform(sig, e);
+            result[key] = result[key] || [];
+            result[key].push(e);
+        });
+        return result;
+    });
+};
+
+extension.where = function(c, d) {
+    var sig = c || "_";
+    var f = d ? function(e) {
+            return transform(sig, e) === d;
+        } : function(e) {
+            return !!transform(sig, e);
+        };
+    return this.and(function(list) {
+        return list.filter(f);
+    });
+};
+
+
+extension.error = function(type, message) {
+    if (type instanceof Error) {
+        return flumine.through(function(d) {
+            throw new type(message);
+        });
+    } else {
+        return flumine.through(function(d) {
+            throw new Error(type);
+        });
+    }
+};
+
 var pass = flumine.pass = flumine(function(d, ok, ng) {
     return ok(d);
 });
@@ -408,3 +493,8 @@ Object.keys(extension).forEach(function(key) {
         return pass[key].apply(this, slice.call(arguments));
     };
 });
+
+// 
+extension.null = flumine.fixed(null);
+extension.true = flumine.fixed(true);
+extension.false = flumine.fixed(false);

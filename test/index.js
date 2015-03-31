@@ -288,7 +288,110 @@ describe("flumine", function() {
             });
             return test(input);
         });
+    });
+    var isDeeply = function(r) {
+        return flumine.and(function(d) {
+            assert.deepEqual(d, r);
+        });
+    };
+    var equals = function(r) {
+        return flumine.and(function(d) {
+            assert.equal(d, r);
+        });
+    };
+    describe("uniqBy", function() {
+        var list = flumine.fixed([1, 2, 22, 3, 22, 3, 4, 5]);
+        var hashList = flumine.fixed([{
+            age: 10,
+            name: "hoge"
+        }, {
+            age: 20,
+            name: "hoge"
+        }]);
+        var uniq = list.uniqBy();
+        it("should return unique list", uniq.and(isDeeply([1, 2, 22, 3, 4, 5])));
+        it("should return unique list by given parameter",
+            hashList.uniqBy("name").and(isDeeply([{
+                age: 10,
+                name: "hoge"
+            }])));
+    });
+    describe("groupBy", function() {
+        var hashList = flumine.fixed([{
+                age: 10,
+                class: "A",
+                name: "hoge"
+            }, {
+                age: 20,
+                class: "B",
+                name: "hoge"
+            }, {
+                age: 15,
+                class: "B"
+            }
+
+        ]);
+        var gp = hashList.groupBy("class");
+        var range = hashList.groupBy(function(d) {
+            return Math.floor(d.age / 10) * 10 + "";
+        });
+        it("should return a hash of list", gp.as("A.length").and(equals(1)));
+        it("should return a hash of list", gp.as("B.length").and(equals(2)));
+        it("should return a hash of list grouped by age range",
+            range.as("10.length").and(equals(2)));
 
     });
-
+    describe("pluck", function() {
+        var hashList = flumine.fixed([{
+            age: 10,
+            class: "A",
+            name: "hoge"
+        }, {
+            age: 20,
+            class: "B",
+            name: "hoge"
+        }, {
+            age: 15,
+            class: "B"
+        }]);
+        it("should return a list of property",
+            hashList.pluck("class").and(isDeeply(["A", "B", "B"])));
+    });
+    describe("sortBy", function() {
+        var hashList = flumine.fixed([{
+            age: 10,
+            class: "A",
+            name: "hoge"
+        }, {
+            age: 20,
+            class: "B",
+            name: "hoge"
+        }, {
+            age: 15,
+            class: "B"
+        }]);
+        var sorted = hashList.sortBy("age");
+        var sorted_b = hashList.sortBy("age", true);
+        it("", sorted.pluck("age").and(isDeeply([20, 15, 10])));
+        it("", sorted_b.pluck("age").and(isDeeply([10, 15, 20])));
+    });
+    describe("where", function() {
+        var hashList = flumine.fixed([{
+            age: 10,
+            class: "A",
+            name: "hoge"
+        }, {
+            age: 20,
+            class: "B",
+            isPublic: true,
+            name: "hoge"
+        }, {
+            age: 15,
+            class: "B"
+        }]);
+        var sorted = hashList.where("age", 10);
+        it("",
+            hashList.where("age", 10).as("[0].age").and(equals(10)));
+        it("", hashList.where("isPublic").as("[0].isPublic").and(equals(true)));
+    });
 });
