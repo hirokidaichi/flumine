@@ -370,7 +370,7 @@ describe("flumine", function() {
             age: 15,
             class: "B"
         }]);
-        var sorted = hashList.sortBy("age");
+        var sorted = hashList.sortBy(flumine.as("age"));
         var sorted_b = hashList.sortBy("age", true);
         it("", sorted.pluck("age").and(isDeeply([20, 15, 10])));
         it("", sorted_b.pluck("age").and(isDeeply([10, 15, 20])));

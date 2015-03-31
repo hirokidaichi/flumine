@@ -1,6 +1,6 @@
 {
   "name": "flumine",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "wiring all",
   "main": "index.js",
   "scripts": {

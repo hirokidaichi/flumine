@@ -416,14 +416,18 @@ extension.pluck = function(t) {
 
 extension.uniqBy = function(t) {
     var sig = t || "_";
-    return this.and(function(list) {
+    var keyMaker = (sig.isFlumine) ? sig : flumine.as(sig);
+    return this.each(flumine.set({
+        val: flumine.pass,
+        key: keyMaker
+    })).and(function(list) {
         var result = {};
         var ret = [];
         list.forEach(function(e) {
-            var key = transform(sig, e);
+            var key = e.key;
             if (!result[key]) {
                 result[key] = true;
-                ret.push(e);
+                ret.push(e.val);
             }
         });
         return ret;
@@ -432,27 +436,32 @@ extension.uniqBy = function(t) {
 
 extension.sortBy = function(t, asc) {
     var sig = t || "_";
+    var keyMaker = (sig.isFlumine) ? sig : flumine.as(sig);
     var order = (asc) ? 1 : -1;
-    return this.and(function(list) {
-        // schwartzian transform
-        return list.map(function(e) {
-            return [e, transform(sig, e)];
-        }).sort(function(a, b) {
-            return (a[1] - b[1]) * order;
-        }).map(function(r) {
-            return r[0];
+
+    return this.each(flumine.set({
+        comp: keyMaker,
+        val: flumine.pass,
+    })).and(function(list) {
+        return list.sort(function(a, b) {
+            return (a.comp - b.comp) * order;
         });
-    });
+    }).pluck("val");
 };
 
 extension.groupBy = function(t) {
     var sig = t || "_";
-    return this.and(function(list) {
+    var keyMaker = (sig.isFlumine) ? sig : flumine.as(sig);
+
+    return this.each(flumine.set({
+        key: keyMaker,
+        val: flumine.pass,
+    })).and(function(list) {
         var result = {};
         list.forEach(function(e) {
-            var key = transform(sig, e);
+            var key = e.key;
             result[key] = result[key] || [];
-            result[key].push(e);
+            result[key].push(e.val);
         });
         return result;
     });
