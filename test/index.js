@@ -1,5 +1,5 @@
 var flumine = require("../");
-var assert = require("assert");
+var assert = require("power-assert");
 var fs = require("fs-promise");
 
 describe("flumine", function() {
