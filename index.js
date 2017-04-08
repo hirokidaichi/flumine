@@ -275,7 +275,7 @@ extension.debug = function(code) {
             name: code,
             input: err.inputData
         });
-        logit("error")(err);
+        logit("error")(err).catch(function(e){});
         ng(err);
     });
 };
