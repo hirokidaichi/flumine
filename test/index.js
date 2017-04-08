@@ -335,10 +335,11 @@ describe("flumine", function() {
         var range = hashList.groupBy(function(d) {
             return Math.floor(d.age / 10) * 10 + "";
         });
-        it("should return a hash of list", gp.as("A.length").and(equals(1)));
-        it("should return a hash of list", gp.as("B.length").and(equals(2)));
+        var length = function(d) { return d.length; }
+        it("should return a hash of list", gp.as("A").and(length).and(equals(1)));
+        it("should return a hash of list", gp.as("B").and(length).and(equals(2)));
         it("should return a hash of list grouped by age range",
-            range.as("10.length").and(equals(2)));
+            range.as("10").and(length).and(equals(2)));
 
     });
     describe("pluck", function() {
